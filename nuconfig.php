@@ -1,9 +1,9 @@
 <?php
 
-    $nuConfigDBHost                 = "127.0.0.1";
+    $nuConfigDBHost                 = "srv-captain--nubuilder4-db";
     $nuConfigDBName                 = "nubuilder4";
     $nuConfigDBUser                 = "root";
-    $nuConfigDBPassword             = "";
+    $nuConfigDBPassword             = "1234";
     $nuConfigDBGlobeadminUsername   = "globeadmin";     //-- globeadmin username
     $nuConfigDBGlobeadminPassword   = "nu";             //-- globeadmin password
     $nuConfigTitle                  = "nuBuilder 4";
