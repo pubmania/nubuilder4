@@ -1,4 +1,7 @@
  {
   "schemaVersion": 2,
-  "templateId": "php/7.4"
+  "dockerfileLines": [
+                       "FROM php:7.4.3-apache",
+                       "docker-php-ext-install mysqli pdo pdo_mysql"
+                     ]
  }
