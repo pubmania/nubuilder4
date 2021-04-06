@@ -2,7 +2,6 @@
   "schemaVersion": 2,
   "dockerfileLines": [
                        "FROM php:7.4.3-apache",
-                       "COPY apache2.conf /etc/apache2",
-                       "RUN docker-php-ext-install mysqli pdo pdo_mysql"
+                       "RUN docker-php-ext-install pdo pdo_mysql"
                      ]
  }
