@@ -167,8 +167,8 @@ function nuRunReport(f, iframe){
 	last.session_id 	= window.nuSESSION;
 	last.call_type		= 'runreport';
 	last.form_id		= f;
-	last.hash 			= nuHashFromEditForm();
-	
+	last.hash 			= parent.nuHashFromEditForm();
+
 	var successCallback = function(data,textStatus,jqXHR){
 		
 		var fm 			= data;
@@ -191,6 +191,33 @@ function nuRunReport(f, iframe){
 	
 }
 
+function nuRunReportSave(f){
+
+	var current   			= nuFORM.getCurrent();
+	var last                = $.extend(true, {}, current);
+	last.session_id         = window.nuSESSION;
+	last.call_type          = 'runreport';
+	last.form_id			= f;
+	last.hash				= nuHashFromEditForm();
+	var successCallback		= function(data,textStatus,jqXHR){
+		
+		var fm				= data;
+		
+		if(!nuDisplayError(fm)){
+
+			var fd 			= new FormData();
+			fd.append('ID', fm.id);
+			var xhr 		= new XMLHttpRequest();
+			xhr.open('POST', 'nurunpdf.php', true);
+			xhr.send(fd);
+			
+		}
+		
+	};
+	
+	nuAjax(last,successCallback);
+
+}
 
 function nuLogout(f, iframe){
 
@@ -585,6 +612,8 @@ function nuGetLookupCode(e){
 	last.code		 		= e.target.value;
 	last.hash  				= nuHashFromEditForm();
 	
+	window.nuLOOKUPSTATE[last.object_id] = 'looking';
+
 	var successCallback = function(data,textStatus,jqXHR){		
 		
 		nuSERVERRESPONSELU 	= data;
@@ -693,7 +722,6 @@ function nuUpdateData(action, instruction){
 				
 			}else{
 
-//				window.nuSAVED	= true;
 				nuForm(f, fm.record_id, fm.filter, fm.search, 1);		//-- go to saved or created record
 				
 			}

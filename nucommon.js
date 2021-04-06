@@ -661,51 +661,6 @@ function nuIsOpener() {
 	return false;
 }
 
-/*
-function nuFormValues(){  //-- list of changed fields and values
-
-    var list   = {};
-    
-    $("[data-nu-data]").each(function() {
-        
-        list[$(this).attr('id')] = $(this).val();
-        
-    });
-    
-    var f = {};
-    
-    for (var fld in list) {
-		
-        f[fld] = $('#' + fld).val();
-		
-    }
-
-	return f;
-    
-}
-
-
-function nuEditPHP(ev){
-
-	var r	= window.nuFORM.getProperty('record_id');
-	var i	= r + '_' + ev;
-	
-	if(r == '-1'){
-	
-		alert('Must Save Record Before Adding Procedures');
-		return;
-		
-	}
-	
-	c	= $('#sfo_code').val();
-	d	= $('#sfo_description').val();
-	
-	nuSetHash('the_form', d + ' (' + c + ')');
-	nuSetHash('nuSystemPHP', 1);
-	nuPopup("nuphp", i);
-
-}
-*/
 
 function nuPreview(a){
 
@@ -803,33 +758,6 @@ function  nuGetLookupFields(id){
 	return a;
 	
 }
-
-/*
-function nuEnable(i){                 //-- Enable Edit Form Object
-
-	var o	= [i, i + 'code', i + 'button', i + 'description'];
-	
-	for(var c = 0 ; c < o.length ; c++){
-			
-		$('#' + o[c])
-		.removeClass('nuReadonly')
-		.prop('readonly', false)
-		.prop('disabled', false);
-		
-	}
-	
-	if(c == 2){										//-- button
-		
-		$('#' + o[c])
-		.on( "click", function() {
-		  nuBuildLookup(this,"");
-		})
-		
-	}
-
-}
-
-*/
 
 
 
@@ -953,6 +881,7 @@ function nuHide(i){                 //-- Hide Edit Form Object
 
 }
 
+/*
 function nuAddThousandSpaces(s, c){
 
 	var a	= String(s).split('');
@@ -971,6 +900,11 @@ function nuAddThousandSpaces(s, c){
 	
 	return r.join('');
 	
+}
+*/
+
+function nuAddThousandSpaces(s, c){
+    return s.replace(/\B(?=(\d{3})+(?!\d))/g, c)
 }
 
 function nuDuplicates(arr){
@@ -1302,6 +1236,11 @@ function nuAddRow(s){
 
 function nuAccessLevelCode(){
 	return nuSERVERRESPONSE.access_level_code;
+}
+
+
+function nuAccessLevelId(){
+	return nuSERVERRESPONSE.access_level_id;
 }
 
 function nuUserName(){
@@ -1768,3 +1707,37 @@ function nuImportCSV(t, s){
 	}
 	
 }
+
+function nuIsIframe(){
+
+	return parent.window.nuDocumentID != window.nuDocumentID;
+		
+}
+
+// After clicking a nuActionButton (Save, Delete, Print, Clone etc.), disable it for 1.5 secs to prevent a user from double-clicking it.
+
+function preventButtonDblClick() {
+
+   $('.nuActionButton').click(function() {   
+   
+      var id = $(this).attr("id");   
+
+      nuDisable(id);
+
+      setTimeout(
+	  
+         function() {
+            nuEnable(id);
+         }
+		 , 1500);
+   });
+
+}
+
+
+function nuOnLoad() {
+
+   preventButtonDblClick();
+   
+}
+

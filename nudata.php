@@ -53,7 +53,8 @@ function nuValidateSubforms(){
 							if($d == 0){
 								nuDisplayError("$label " . nuTranslate('cannot be left blank'));
 							}else{
-								nuDisplayError("$label on row $noz " . nuTranslate('cannot be left blank') . " $slabel");
+								//nuDisplayError("$label on row $noz " . nuTranslate('cannot be left blank') . " $slabel");
+								nuDisplayError("$label ".nuTranslate('on row'). " " .$noz. " " . nuTranslate('cannot be left blank') . " $slabel");
 							}
 							
 						}
@@ -67,9 +68,11 @@ function nuValidateSubforms(){
 						if($dupe and $notDeleted){
 							
 							if($d == 0){
-								nuDisplayError("$label has a duplicate");
+								//nuDisplayError("$label has a duplicate");
+								nuDisplayError("$label " . nuTranslate('has a duplicate'));
 							}else{
-								nuDisplayError("$label on row $noz has a duplicate $slabel");
+								//nuDisplayError("$label on row $noz has a duplicate $slabel");
+								nuDisplayError("$label ".nuTranslate('on row'). " " .$noz. " ". nuTranslate('has a duplicate') . " $slabel");
 							}
 							
 						}
@@ -158,7 +161,14 @@ function nuUpdateDatabase(){
 		$fk			= $sf->foreign_key;
 		$fv			= $_POST['nuHash']['record_id'];
 		$auto		= nuAutoNumbers($sf->object_id);
-		$log		= in_array($table . '_nulog', $cts[$table]['names']);
+		
+		if(is_array($cts[$table]['names'])){
+			$CTSTN = $cts[$table]['names'];
+		}else{
+			$CTSTN = array();
+		}
+		
+		$log		= in_array($table . '_nulog', $CTSTN);
 		
 		for($r = 0 ; $r < count($rows) ; $r++){
 			
@@ -211,7 +221,7 @@ function nuUpdateDatabase(){
 					$isAN			= in_array($fields[$R], $auto);
 
 					if($edit[$R] == 1 or $isAN){														//-- has been edited
-					
+
 						if($cts[$table] == ''){															//-- not valid table name
 
 							if($form_type == 'launch'){
@@ -223,8 +233,9 @@ function nuUpdateDatabase(){
 							return;
 
 						}
-						
-						if(in_array($fields[$R], $cts[$table]['names'])){								//-- valid field names
+
+						$idx = array_search($fields[$R], $CTSTN);
+						if($idx !== false){								//-- valid field names
 
 							if($isAN){
 								$v	= nuAutoNumber($sf->object_id, $fields[$R], $row[$R]);
@@ -232,13 +243,40 @@ function nuUpdateDatabase(){
 								$v	= $row[$R];
 							}
 							
-							$add	= addslashes($v);
 							$fld	= $fields[$R];
-							$V[]	= "'$add'";
+														
+							$type = $cts[$table]['types'][$idx]; 	//-- date types: null if empty
+							if (in_array($type, array('date','datetime','timestamp','year')) && $v == '') {
+								$V[] 	= "null";
+								$F[]	= "`$fld` = null";
+							} else
+							{
+								$add = addslashes($v);	
+								$V[]	= "'$add'";
+								$F[]	= "`$fld` = '$add'";
+							}
+									
 							$I[]	= "`$fld`";
-							$F[]	= "`$fld` = '$add'";
+							
 							
 						}
+
+						
+//						if(in_array($fields[$R], $CTSTN)){								//-- valid field names
+//
+//							if($isAN){
+//								$v	= nuAutoNumber($sf->object_id, $fields[$R], $row[$R]);
+//							}else{
+//								$v	= $row[$R];
+//							}
+//							
+//							$add	= addslashes($v);
+//							$fld	= $fields[$R];
+//							$V[]	= "'$add'";
+//							$I[]	= "`$fld`";
+//							$F[]	= "`$fld` = '$add'";
+//							
+//						}
 						
 					}
 					
@@ -639,6 +677,64 @@ function nuSubformObject($id){
 	return false;
 	
 }
+
+
+function nuCloneForm(){
+	
+	return;
+	//nudebug(nuhash());
+
+	$f 		= nuHash()['CLONED_RECORD_ID'];
+	$TT		= nuTT();
+
+	$s		= "CREATE TABLE p$TT SELECT * FROM zzzzsys_php WHERE zzzzsys_php_id LIKE CONCAT(?,'%') ";
+	$t		= nuRunQuery($s, [$f]);
+
+	$s		= "CREATE TABLE o$TT SELECT * FROM zzzzsys_object WHERE sob_all_zzzzsys_form_id = ? ";
+	$t		= nuRunQuery($s, [$f]);
+
+	$s		= "
+				CREATE TABLE e$TT 
+				SELECT * 
+				FROM zzzzsys_event 
+				WHERE sev_zzzzsys_object_id IN(SELECT zzzzsys_object_id FROM o$TT)
+			";
+	$t		= nuRunQuery($s);
+
+	$s		= "SELECT * FROM o$TT";
+	$t		= nuRunQuery($s);
+	
+	while($r = db_fetch_object($t)){																																	
+		
+		$was	= $r->zzzzsys_object_id;																																
+		$is 	= nuID();
+		$s		= "UPDATE o$t SET zzzzsys_object_id = ? WHERE zzzzsys_object_id = ?";
+		nuUpdateEvent($t, $is);
+			
+	}
+	
+}
+
+
+function nuUpdateEvent($t, $o){
+
+	$s	= "
+			UPDATE e$t 
+			SET sev_zzzzsys_object_id = ?, zzzzsys_event_id  = ? 
+			WHERE zzzzsys_event_id = ?
+		";
+	$t 	= nuRunQuery("SELECT * FROM e$t");
+	
+	while($r = db_fetch_row($r)){
+
+		$i 	= nuID();
+		nuRunQuery($s, [$o, $i, $r->zzzzsys_event_id]);
+		
+	}
+	
+	
+}
+
 
 
 function nuDeleteForm($f){

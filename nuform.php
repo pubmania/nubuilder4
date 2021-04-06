@@ -328,6 +328,7 @@ function nuGetFormObject($F, $R, $OBJS){
     $f->browse_table_id		= nuHash()['TABLE_ID'];
     $f->pages				= ceil($B[1]/$f->rows);
     $f->objects 			= $a;
+	$f->number_formats		= nuBuildCurrencyFormats();
     $O 						= new stdClass();
     $O->forms[] 			= $f;
 
@@ -721,31 +722,30 @@ function nuGetSubformRecords($R, $A){
 
 function nuBuildTabList($i){
 
-    $o 				= 0;
-    $a 				= array();
-    $s 				= "
-    
-        SELECT * 
+    $o                 = 0;
+    $a                 = array();
+    $s                 = "
+
+        SELECT DISTINCT zzzzsys_tab.*
         FROM zzzzsys_tab 
         INNER JOIN zzzzsys_object ON sob_all_zzzzsys_form_id = syt_zzzzsys_form_id
         WHERE syt_zzzzsys_form_id = '$i'
-        GROUP BY syt_zzzzsys_form_id, syt_title
         ORDER BY syt_order
-    
+
     ";
 
     $t = nuRunQuery($s);
 
     while($r = db_fetch_object($t)){
-        
-        $r->number	= $o;
+
+        $r->number    = $o;
         $o++;
-        $a[]		= $r;
-        
+        $a[]        = $r;
+
     }
-	
+
     return $a;
-    
+
 }
 
 
@@ -1123,7 +1123,7 @@ function nuGatherFormAndSessionData($home){
 	}
     
     $formAndSessionData->errors 		= $_POST['nuErrors'];
-	
+
 	return $formAndSessionData;
 	
 }

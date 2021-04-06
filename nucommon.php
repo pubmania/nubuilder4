@@ -8,7 +8,10 @@ require_once('nuemailer.php');
 require_once dirname(__FILE__) . '/nusqlclass.php';
 require_once dirname(__FILE__) . '/nusearchclass.php';
 
-set_time_limit(0);
+//set_time_limit(0);
+
+nuSetTimeLimit(0);
+
 mb_internal_encoding('UTF-8');
 
 $GLOBALS['nuSetup']			= db_setup();
@@ -44,6 +47,14 @@ function nuClientTimeZone(){
     // set timezone setting for MYSQL
     nuRunQuery("SET time_zone = '$offset'");       
  
+}
+
+
+
+function nuSetTimeLimit(){
+	if (function_exists('set_time_limit')) {
+		set_time_limit(0);
+	}
 }
 
 
@@ -266,7 +277,7 @@ function nuSetHashList($p){
 
 	foreach ($p as $key => $value){											//-- The 'opener' Form's properties
 
-		if(gettype($value) == 'string'){
+		if(gettype($value) == 'string' or is_numeric ($value)){
 			$h[$key]			= addslashes($value);
 		}else{
 			$h[$key]			= '';
@@ -278,7 +289,7 @@ function nuSetHashList($p){
 		
 		foreach ($p['hash'] as $key => $value){								//-- The 'opener' Form's hash variables
 
-			if(gettype($value) == 'string'){
+			if(gettype($value) == 'string' or is_numeric ($value)){
 				$h[$key]			= addslashes($value);
 			}else{
 				$h[$key]			= '';
@@ -367,7 +378,8 @@ function nuRunPHP($procedure_code){
 	$j									= json_encode($_POST['nuHash']);
 
 	if(!$_SESSION['nubuilder_session_data']['isGlobeadmin'] and !in_array($ob->zzzzsys_php_id, $p)){
-		nuDisplayError("Access To Procedure Denied... ($procedure_code)");
+	//	nuDisplayError("Access To Procedure Denied... ($procedure_code)");
+		nuDisplayError(nuTranslate("Access To Procedure Denied...")." ($procedure_code)");
 	}
 
 	nuSetJSONData($id, $j);
@@ -389,7 +401,8 @@ function nuRunPHPHidden($nuCode){
 	if($_SESSION['nubuilder_session_data']['isGlobeadmin'] or in_array($r->zzzzsys_php_id, $p)){
 		nuEval($r->zzzzsys_php_id);
 	}else{
-		nuDisplayError("Access To Procedure Denied... ($nuCode)");
+//		nuDisplayError("Access To Procedure Denied... ($nuCode)");
+		nuDisplayError(nuTranslate("Access To Procedure Denied...")." ($nuCode)");
 	}
 
 	$f						= new stdClass;
@@ -424,7 +437,7 @@ function nuSetJSONData($i, $nj){
 
 
 function nuGetJSONData($i){
-	
+
 	$s					= "SELECT * FROM zzzzsys_session WHERE zzzzsys_session_id = ? ";
 	$t					= nuRunQuery($s, array($_SESSION['nubuilder_session_data']['SESSION_ID']));			 
 	$r					= db_fetch_object($t);
@@ -490,7 +503,7 @@ function nuReplaceHashVariables($s){
 	}
 
 	foreach ($a as $k => $v) {
-		if(!is_object ($a[$k])) {
+		if(!is_object ($a[$k]) && !is_array ($a[$k])) {
 			$s	= str_replace ('#' . $k . '#', $v, $s);
 		}
 	}
@@ -789,51 +802,15 @@ function nuFormatList(){
 function nuAddFormatting($v, $f){
 
 	if($v == '' || $f == ''){return $v;}
+	$m = $v < 0 ? '-' : '';
 	
-	if($f[0] == 'N'){									//-- number  '456.789','N|€ 1,000.00'
+	if($f[0] == 'N'){												//-- number  '456.789','N|€ 1,000.00'
+		$CF				= nuGetNumberFormat(substr($f,2));			//-- CF[0]=sign, CF[1]=separator, CF[2]=decimal, CF[3]=places
+		$nf				= number_format ($v , $CF[3] , $CF[2] , $CF[1]);
+		$nm				= str_replace('-', '', $nf);
 
-		$f			= substr($f, 2);
-		$e			= explode(' ', $f);
-		$s			= $e[0];							//-- sign
-		$n			= $e[1];							//-- number
-		$p			= nuPunctuation($f);				//-- returns [comma, decimal]
-		$c			= $p[0];							//-- comma
-		$dp			= $p[1];							//-- decimal point
-		$o			= explode('.', $v);
-		
-		if(count($o) == 1){$o[1] = '';}
-		
-		$d			= $o[1];							//-- decimal number
+		return $m . $CF[0] . ' ' . $nm;
 
-		if($dp == ''){
-			$p		= 0;								//-- decimal places
-		}else{
-			
-			$pos	= strpos($f, $dp);					//-- decimal places
-			$p		= strlen(substr($f, $pos));
-		}
-
-		$h			= nuAddThousandSpaces($o[0], $c);
-		
-		$ss			= substr($s, 0,2);
-		
-		if($ss == '10' || $ss == '1,' || $ss == '1.'){		// no sign
-			$s		= '';
-		}else{
-			$s		= $s . ' ';
-		}
-		
-		if($p == 0){ 									//-- no decimal numbers even if it has a decimal place
-			$m		= $s . $h;
-		}else{
-			
-			$suf	= substr($d . str_repeat('0', 20), 0, $p - 1);
-			$m		= $s . $h . $dp . $suf;
-			
-		}
-
-		return $m;
-	
 	}
 	
 	if($f[0] == 'D'){	//-- date
@@ -875,6 +852,19 @@ function nuAddFormatting($v, $f){
 	}
 	
 	return $v;
+	
+}
+
+function nuGetNumberFormat($f){
+
+	$s = "SELECT * FROM zzzzsys_format";
+	$t = nuRunQuery($s);
+
+	while($r = db_fetch_object($t)){
+		if($r->srm_format == $f){
+			return json_decode($r->srm_currency);
+		}
+	}
 	
 }
 
@@ -1093,17 +1083,17 @@ function nuBuildFormSchema(){
 
 function nuBuildTableSchema(){
 
-	$a				= array();
-	$t				= nuRunQuery("SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = DATABASE()");
+   $a            = array();
+   $t            = nuRunQuery("SELECT table_name as TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = DATABASE()");
 
-	while($r = db_fetch_object($t)){
-		
-		$tn			= $r->table_name;
-		$a[$tn] 	= array('names' => db_field_names($tn), 'types' => db_field_types($tn), 'primary_key' => db_primary_key($tn), 'valid' => 1);
-		
-	}
-	
-	return $a;
+   while($r = db_fetch_object($t)){
+      
+      $tn         = $r->TABLE_NAME;
+      $a[$tn]    = array('names' => db_field_names($tn), 'types' => db_field_types($tn), 'primary_key' => db_primary_key($tn), 'valid' => 1);
+      
+   }
+   
+   return $a;
 
 }
 
@@ -1111,19 +1101,16 @@ function nuBuildTableSchema(){
 
 function nuBuildViewSchema(){
 
-	$a				= array();
-	$t				= nuRunQuery("SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'VIEW' AND table_schema = DATABASE()");
+   $a            = array();
+   $t            = nuRunQuery("SELECT table_name as TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'VIEW' AND table_schema = DATABASE()");
 
-	while($r = db_fetch_object($t)){
-		$a[]		= $r->table_name;
-	}
-	
-	return $a;
+   while($r = db_fetch_object($t)){
+      $a[]      = $r->TABLE_NAME;
+   }
+   
+   return $a;
 
 }
-
-
-
 function nuUpdateFormSchema(){
 
 	$s 		= nuGetJSONData('clientFormSchema');
@@ -1539,7 +1526,7 @@ function db_setup(){
 }
 
 
-
+/*
 function nuUserLanguage(){
 
 	$user_id	= nuHash()['USER_ID'];
@@ -1550,7 +1537,25 @@ function nuUserLanguage(){
 	return $l;
 	
 }
+*/
 
+function nuUserLanguage(){
+
+   $user_id   = nuHash()['USER_ID'];
+   
+   if ($user_id == 'globeadmin') {
+      $s = 'SELECT set_language as language FROM zzzzsys_setup WHERE zzzzsys_setup_id = 1';
+   } else {
+      $s = 'SELECT sus_language as language FROM zzzzsys_user WHERE zzzzsys_user_id = ?';
+   }
+   
+   $t          = nuRunQuery($s, [$user_id]);
+   $r          = db_fetch_object($t);
+   $l          = $r->language;
+
+   return $l;
+   
+}
 
 function nuTranslate($e){
 
@@ -1568,6 +1573,195 @@ function nuTranslate($e){
 
         return $tr == '' ? $e : $tr;
 
+}
+
+
+function nuToCSV($table, $file, $d){
+	
+	$T = nuRunQuery("SELECT * FROM `$table`");
+	$a = array();
+	$c = db_field_names($table);
+	
+	while($r = db_fetch_row($T)){
+		$a[] = $r;
+	}
+
+	header('Content-Type: application/excel');
+	header('Content-Encoding: UTF-8');
+	header('Content-Disposition: attachment; filename="' . $file . '"');
+	
+	$fp = fopen('php://output', 'w');
+
+	fputcsv($fp, $c, chr($d));
+
+	for($i = 0 ; $i < count($a) ; $i++) {
+		fputcsv($fp, $a[$i], chr($d));
+	}
+	
+	fclose($fp);
+
+}
+
+function nuFromCSV($file, $table, $d){
+
+	if(in_array($table,nuListTables())){
+		print '<br>&nbsp;&nbsp;<br>' . nuTranslate("This tablename has already been used") . " (<b>$table</b>)";
+		return;
+	}
+	
+	ini_set('auto_detect_line_endings', true);
+
+	$a = array();
+	$w = array();
+	$c = array();
+	$h = fopen('csvfiles/' . $file, "r");
+	$id = $table . '_nuid';
+
+	if(empty($h) === false) {
+
+		while(($data = fgetcsv($h, 0, chr($d))) !== false){
+			
+			if(count($a) == 0){
+				array_unshift($data, $id);
+			}else{
+				array_unshift($data, nuID());
+			}
+			
+			$a[] = $data;
+		}
+
+		for($I = 1 ; $I < count($a) ; $I++){
+			
+			for($i = 0 ; $i < count($a[$I]) ; $i++){
+				
+				if(isset($w[$i])){
+					$w[$i] = max($w[$i], strlen($a[$I][$i]));
+				}else{
+					$w[] = 0;
+				}
+				
+			}
+			
+		}
+
+		fclose($h);
+		
+	}
+	
+	$columns = array();
+	$rows = array();
+	for($i = 0 ; $i < count($w) ; $i++){
+		
+		$name = $a[0][$i];
+		$size = $w[$i];
+		$columns[] = '`' . $name . '`';
+		
+		if($size > 3000){
+			$c[] = "`$name` text NOT NULL";
+		}else{
+			$c[] = "`$name` varchar($size) NOT NULL";
+		}
+		
+	}
+
+	nuRunQuery("CREATE TABLE `$table` (" . implode(',',$c) . ") CHARSET=utf8;");
+	
+	if(!in_array($table, nuListTables())){
+		
+		print "<br>" . "&nbsp;&nbsp;" . nuTranslate("Could not create table") . "&nbsp;<b>$table</b>";
+		return;
+		
+	}
+
+	$s1 = "INSERT INTO `$table` (" . implode(',',$columns) . ") VALUES " ;
+
+
+	for($I = 1 ; $I < count($a) ; $I++){
+		
+		$values = array();
+	
+		for($i = 0 ; $i < count($a[$I]) ; $i++){
+			$values[] = '"' . $a[$I][$i] . '"';
+		}
+
+		$rows[] = '(' . implode(',',$values) . ")\n";
+		
+	}
+
+
+	nuRunQuery($s1 . implode(',',$rows));
+	
+	nuRunQuery("ALTER TABLE `$table` ADD PRIMARY KEY(`$id`);");
+	
+	print "<br>" . "&nbsp;&nbsp;" . nuTranslate("A table called") . "&nbsp;<b>$table</b>&nbsp;" . nuTranslate("has been created in the database");
+	
+}
+
+function nuListTables(){
+	
+	$a	= [];
+	$t 	= nuRunQuery("SHOW TABLES");
+	
+	while($r = db_fetch_row($t)){
+		$a[] = $r[0];
+	}
+		
+	return $a;
+	
+}
+
+
+
+
+
+function nuBuildCurrencyFormats(){
+
+	$t = nuRunQuery("SHOW COLUMNS FROM zzzzsys_format LIKE 'srm_currency'");
+	
+	if(db_num_rows($t) == 0){
+		nuRunQuery("ALTER TABLE zzzzsys_format ADD srm_currency VARCHAR(25) NULL DEFAULT NULL AFTER srm_format");
+	}
+	
+	$s = "SELECT * FROM zzzzsys_format WHERE srm_type = 'Number' AND ISNULL(srm_currency)";
+	$t = nuRunQuery($s);
+	
+	while($r = db_fetch_object($t)){
+		
+
+		$e			= explode(' ', $r->srm_format);
+		$si			= $e[0];										//-- sign
+		$se			= $e[1][1] == '0' ? '' : $e[1][1];				//-- separator
+		$de			= $e[1][1] == '0' ? $e[1][4] : $e[1][5];		//-- decimal point
+
+		if($de == ''){
+			$ex		= $e[1];
+		}else{
+			$ex		= explode($de, $e[1]);
+		}
+		$dp			= strlen($ex[1]);								//-- decimal places
+		$js			= json_encode([$si, $se, $de, $dp], JSON_UNESCAPED_UNICODE);
+		
+		$s			= "
+						UPDATE zzzzsys_format 
+						SET srm_currency = ? 
+						WHERE zzzzsys_format_id = ?
+						";
+						
+		nuRunQuery($s, [$js, $r->zzzzsys_format_id]);
+		
+		$a[]		= ['N|'. $r->srm_format, $js];
+
+	}
+
+
+	$t = nuRunQuery("SELECT * FROM zzzzsys_format WHERE srm_type = 'Number'");
+	$a = [];
+	while($r = db_fetch_object($t)){
+		$a[]		= ['N|'. trim($r->srm_format), $r->srm_currency];
+	}
+
+	return $a;
+	
 }
 
 
