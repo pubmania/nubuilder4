@@ -1,6 +1,7 @@
 <?php
     ob_start();
-    $nuConfigDBHost                 = "srv-captain--nubuilder4-db";
+    /*$nuConfigDBHost                 = "srv-captain--nubuilder4-db";*/
+    $nuConfigDBHost                 = getenv('DB_HOST');
     $nuConfigDBName                 = "nubuilder4";
     $nuConfigDBUser                 = "root";
     $nuConfigDBPassword             = "1234";
