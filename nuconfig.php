@@ -2,11 +2,11 @@
     ob_start();
     /*$nuConfigDBHost                 = "srv-captain--nubuilder4-db";*/
     $nuConfigDBHost                 = getenv('DB_HOST');
-    $nuConfigDBName                 = "nubuilder4";
-    $nuConfigDBUser                 = "root";
-    $nuConfigDBPassword             = "1234";
-    $nuConfigDBGlobeadminUsername   = "globeadmin";     //-- globeadmin username
-    $nuConfigDBGlobeadminPassword   = "nu";             //-- globeadmin password
+    $nuConfigDBName                 = getenv('DB_NAME'); /*"nubuilder4";*/
+    $nuConfigDBUser                 = getenv('DB_ROOT'); /*"root";*/
+    $nuConfigDBPassword             = getenv('DB_ROOT_PASSWORD'); /*"1234";*/
+    $nuConfigDBGlobeadminUsername   = getenv('DB_GLOBEADMIN_USERNAME'); /*"globeadmin";*/     //-- globeadmin username
+    $nuConfigDBGlobeadminPassword   = getenv('DB_GLOBEADMIN_PASSWORD'); //-- "nu";             //-- globeadmin password
     $nuConfigTitle                  = "nuBuilder 4";
     $nuConfigIsDemo                 = false;
 	$nuConfigTimeOut             	= 1440;
