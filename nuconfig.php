@@ -1,5 +1,5 @@
 <?php
-
+    ob_start();
     $nuConfigDBHost                 = "srv-captain--nubuilder4-db";
     $nuConfigDBName                 = "nubuilder4";
     $nuConfigDBUser                 = "root";
